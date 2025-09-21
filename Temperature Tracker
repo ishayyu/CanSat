@@ -1,0 +1,52 @@
+#include <SPI.h>
+#include <SD.h>
+#include <DHT.h>
+
+// Pin setup
+#define DHTPIN 2       // DHT22 data pin connected to Arduino digital pin 2
+#define DHTTYPE DHT22  // Sensor type
+#define CSPIN 10       // SD card module CS pin
+
+DHT dht(DHTPIN, DHTTYPE);
+File dataFile;
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+
+  // Initialize SD card
+  if (!SD.begin(CSPIN)) {
+    Serial.println("SD card initialization failed!");
+    while (1);
+  }
+  Serial.println("SD card initialized.");
+}
+
+void loop() {
+  // Read temperature from DHT22
+  float temp = dht.readTemperature(); // Celsius
+
+  // Check if reading is valid
+  if (isnan(temp)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  // Print to Serial
+  Serial.print("Temperature: ");
+  Serial.print(temp);
+  Serial.println(" °C");
+
+  // Log data to SD card
+  dataFile = SD.open("data.txt", FILE_WRITE);
+  if (dataFile) {
+    dataFile.print("Temperature: ");
+    dataFile.print(temp);
+    dataFile.println(" °C");
+    dataFile.close();
+  } else {
+    Serial.println("Error opening data.txt");
+  }
+
+  delay(2000); // log every 2 seconds
+}
