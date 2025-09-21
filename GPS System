@@ -1,0 +1,71 @@
+#include <SPI.h>
+#include <SD.h>
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+
+// GPS setup
+static const int RXPin = 4, TXPin = 3; // GPS TX → Arduino RXPin
+static const uint32_t GPSBaud = 9600;  // GPS baud rate
+TinyGPSPlus gps;
+SoftwareSerial ss(RXPin, TXPin);
+
+// SD card
+#define CSPIN 10
+File dataFile;
+
+void setup() {
+  Serial.begin(9600);
+  ss.begin(GPSBaud);
+
+  // Init SD card
+  if (!SD.begin(CSPIN)) {
+    Serial.println("SD card initialization failed!");
+    while (1);
+  }
+  Serial.println("SD card initialized.");
+}
+
+void loop() {
+  // Check for GPS data
+  while (ss.available() > 0) {
+    gps.encode(ss.read());
+  }
+
+  if (gps.location.isUpdated()) {
+    double latitude = gps.location.lat();
+    double longitude = gps.location.lng();
+    double altitude = gps.altitude.meters();
+    int satellites = gps.satellites.value();
+    String timeStamp = "";
+
+    if (gps.time.isValid()) {
+      timeStamp = String(gps.time.hour()) + ":" + 
+                  String(gps.time.minute()) + ":" + 
+                  String(gps.time.second());
+    } else {
+      timeStamp = "N/A";
+    }
+
+    // Print to Serial
+    Serial.print("Lat: "); Serial.print(latitude, 6);
+    Serial.print("  Lng: "); Serial.print(longitude, 6);
+    Serial.print("  Alt: "); Serial.print(altitude);
+    Serial.print(" m  Sats: "); Serial.print(satellites);
+    Serial.print("  Time: "); Serial.println(timeStamp);
+
+    // Log to SD
+    dataFile = SD.open("gpslog.txt", FILE_WRITE);
+    if (dataFile) {
+      dataFile.print("Lat: "); dataFile.print(latitude, 6);
+      dataFile.print(", Lng: "); dataFile.print(longitude, 6);
+      dataFile.print(", Alt: "); dataFile.print(altitude);
+      dataFile.print(" m, Sats: "); dataFile.print(satellites);
+      dataFile.print(", Time: "); dataFile.println(timeStamp);
+      dataFile.close();
+    } else {
+      Serial.println("Error opening gpslog.txt");
+    }
+  }
+
+  delay(1000); // log every 1 second
+}
