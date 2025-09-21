@@ -1,0 +1,57 @@
+#include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
+#include <Adafruit_BMP280.h>  // Library for BMP280
+
+// BMP280
+Adafruit_BMP280 bmp; // I2C interface
+#define SEALEVELPRESSURE_HPA (1013.25) // Standard sea level pressure
+
+// SD Card
+#define CSPIN 10
+File dataFile;
+
+void setup() {
+  Serial.begin(9600);
+
+  // Initialize BMP280
+  if (!bmp.begin(0x76)) {  // Some modules use 0x76, others 0x77
+    Serial.println("Could not find BMP280 sensor!");
+    while (1);
+  }
+
+  // Initialize SD
+  if (!SD.begin(CSPIN)) {
+    Serial.println("SD card initialization failed!");
+    while (1);
+  }
+  Serial.println("SD card initialized.");
+}
+
+void loop() {
+  // Read pressure (in hPa) and altitude (in meters)
+  float pressure = bmp.readPressure() / 100.0; // Pa → hPa
+  float altitude = bmp.readAltitude(SEALEVELPRESSURE_HPA);
+
+  // Print to Serial
+  Serial.print("Pressure: ");
+  Serial.print(pressure);
+  Serial.print(" hPa   Altitude: ");
+  Serial.print(altitude);
+  Serial.println(" m");
+
+  // Log to SD card
+  dataFile = SD.open("data.txt", FILE_WRITE);
+  if (dataFile) {
+    dataFile.print("Pressure: ");
+    dataFile.print(pressure);
+    dataFile.print(" hPa, Altitude: ");
+    dataFile.print(altitude);
+    dataFile.println(" m");
+    dataFile.close();
+  } else {
+    Serial.println("Error opening data.txt");
+  }
+
+  delay(2000); // log every 2 seconds
+}
