@@ -1,0 +1,43 @@
+#include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
+#include <Adafruit_BMP280.h>
+
+Adafruit_BMP280 bmp; 
+#define SEALEVELPRESSURE_HPA (1013.25) // Change if local pressure is different
+
+#define CSPIN 10
+File dataFile;
+
+void setup() {
+  Serial.begin(9600);
+
+  if (!bmp.begin(0x76)) {
+    Serial.println("BMP280 not found!");
+    while (1);
+  }
+
+  if (!SD.begin(CSPIN)) {
+    Serial.println("SD card failed!");
+    while (1);
+  }
+  Serial.println("Ready to log altitude.");
+}
+
+void loop() {
+  float altitude = bmp.readAltitude(SEALEVELPRESSURE_HPA);
+
+  Serial.print("Altitude: ");
+  Serial.print(altitude);
+  Serial.println(" m");
+
+  dataFile = SD.open("altlog.txt", FILE_WRITE);
+  if (dataFile) {
+    dataFile.print("Altitude: ");
+    dataFile.print(altitude);
+    dataFile.println(" m");
+    dataFile.close();
+  }
+
+  delay(1000); // 1s logging
+}
